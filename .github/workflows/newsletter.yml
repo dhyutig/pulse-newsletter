@@ -30,6 +30,13 @@ jobs:
           mkdir -p ~/.config/rclone
           echo "$RCLONE_CONF_B64" | base64 -d > ~/.config/rclone/rclone.conf
 
+      - name: Debug - check decoded config (no secrets exposed)
+        run: |
+          echo "Line count:"
+          wc -l ~/.config/rclone/rclone.conf
+          echo "First line:"
+          head -n 1 ~/.config/rclone/rclone.conf
+
       - name: Pull latest files from Drive
         run: rclone copy gdrive:Newsletter ./raw_files --drive-shared-with-me
 
