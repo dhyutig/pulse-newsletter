@@ -43,7 +43,7 @@ jobs:
       - name: Generate newsletter draft
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: python newsletter_generator.py --input ./raw_files --out ./draft_newsletter.html
+        run: python newsletter_generator.py --input ./raw_files --out ./draft_newsletter.html --force-full
 
       - name: Commit updated run-state
         run: |
