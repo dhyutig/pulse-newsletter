@@ -1,9 +1,11 @@
 name: PULSE Newsletter - Monthly Draft
 
+# Runs at 9am UTC on the 1st of every month.
+# Change the cron schedule below if you want a different cadence/day.
 on:
   schedule:
     - cron: "0 9 1 * *"
-  workflow_dispatch: {}
+  workflow_dispatch: {}   # lets you also trigger it manually from the GitHub Actions tab, for testing
 
 jobs:
   generate-newsletter:
@@ -54,13 +56,35 @@ jobs:
           git push
 
       - name: Email the draft for review
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 465
-          username: ${{ secrets.EMAIL_USERNAME }}
-          password: ${{ secrets.EMAIL_APP_PASSWORD }}
-          subject: "PULSE Newsletter Draft - Ready for Review"
-          to: dhyuti@stanford.edu,mfkling@slac.stanford.edu
-          from: PULSE Newsletter Bot
-          html_body: file://draft_newsletter.html
+        env:
+          SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+        run: |
+          python3 - <<'EOF'
+          import os, json, base64, urllib.request
+
+          with open("draft_newsletter.html", "r") as f:
+              html = f.read()
+
+          payload = {
+              "personalizations": [{
+                  "to": [
+                      {"email": "dhyuti@stanford.edu"},
+                  ]
+              }],
+              "from": {"email": "PULSEinstitute@gmail.com", "name": "PULSE Newsletter"},
+              "subject": "PULSE Newsletter Draft - Ready for Review",
+              "content": [{"type": "text/html", "value": html}],
+          }
+
+          req = urllib.request.Request(
+              "https://api.sendgrid.com/v3/mail/send",
+              data=json.dumps(payload).encode(),
+              headers={
+                  "Authorization": f"Bearer {os.environ['SENDGRID_API_KEY']}",
+                  "Content-Type": "application/json",
+              },
+              method="POST",
+          )
+          with urllib.request.urlopen(req) as resp:
+              print("SendGrid response status:", resp.status)
+          EOF
