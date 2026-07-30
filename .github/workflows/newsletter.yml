@@ -61,6 +61,6 @@ jobs:
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_APP_PASSWORD }}
           subject: "PULSE Newsletter Draft - Ready for Review"
-          to: dhyuti@stanford.edu,mfkling@slac.stanford.edu
+          to: dhyuti@stanford.edu
           from: PULSE Newsletter Bot
           html_body: file://draft_newsletter.html
