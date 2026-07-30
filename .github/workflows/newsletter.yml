@@ -1,0 +1,57 @@
+name: PULSE Newsletter - Monthly Draft
+
+on:
+  schedule:
+    - cron: "0 9 1 * *"
+  workflow_dispatch: {}
+
+jobs:
+  generate-newsletter:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: pip install anthropic extract_msg
+
+      - name: Install rclone
+        run: curl https://rclone.org/install.sh | sudo bash
+
+      - name: Restore rclone config from secret
+        run: |
+          mkdir -p ~/.config/rclone
+          echo "${{ secrets.RCLONE_CONF }}" > ~/.config/rclone/rclone.conf
+
+      - name: Pull latest files from Drive
+        run: rclone copy gdrive:Newsletter ./raw_files --drive-shared-with-me
+
+      - name: Generate newsletter draft
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python newsletter_generator.py --input ./raw_files --out ./draft_newsletter.html
+
+      - name: Commit updated run-state
+        run: |
+          git config user.name "newsletter-bot"
+          git config user.email "actions@github.com"
+          git add last_run.json
+          git commit -m "Update run state" || echo "No state changes to commit"
+          git push
+
+      - name: Email the draft for review
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_APP_PASSWORD }}
+          subject: "PULSE Newsletter Draft - Ready for Review"
+          to: dhyuti@stanford.edu
+          from: PULSE Newsletter Bot
+          html_body: file://draft_newsletter.html
